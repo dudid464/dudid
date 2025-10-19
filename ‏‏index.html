@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>אבירית – קסמים בחינם לילדים 10+</title>
+  <meta name="description" content="אבירית – לומדים קסמים של במה בחינם. סרטוני יוטיוב/טיקטוק, חיפוש כמו גוגל, תיוג לפי רמת קושי וקטגוריות, וללא צורך ליצור קשר." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#fff;--ink:#0f172a;--muted:#475569;--brand:#0ea5e9;--brand2:#1e3a8a;--card:#f8fafc}
+    [data-theme="dark"]{--bg:#0b1220;--ink:#e5e7eb;--muted:#94a3b8;--card:#111827}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:"Heebo",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+    a{color:inherit;text-decoration:none}
+    .container{width:min(1100px,92%);margin-inline:auto}
+    header{position:sticky;top:0;background:rgb(255 255 255 /.7);backdrop-filter:saturate(1.4) blur(8px);border-bottom:1px solid #e2e8f0;z-index:20}
+    [data-theme="dark"] header{background:rgb(11 18 32 /.6);border-bottom-color:#334155}
+    nav{display:flex;align-items:center;justify-content:space-between;padding:.7rem 0}
+    .brand{display:flex;align-items:center;gap:.7rem;font-weight:800}
+    .logo{width:36px;aspect-ratio:1;border-radius:10px;background:linear-gradient(135deg,#7dd3fc,#1e40af)}
+    .menu{display:flex;gap:.6rem}
+    .menu a{padding:.5rem .8rem;border-radius:8px}
+    .menu a:hover{background:#e0f2fe}
+    [data-theme="dark"] .menu a:hover{background:#0b1220}
+    .pill{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .7rem;border-radius:999px;background:#e0f2fe;color:#0c4a6e;font-weight:700}
+    [data-theme="dark"] .pill{background:#0b1220;color:#7dd3fc}
+    .hero{padding:3rem 0 2rem;display:grid;grid-template-columns:1.1fr .9fr;gap:1.4rem;align-items:center}
+    .hero h1{margin:.2rem 0 .6rem;font-size:clamp(1.8rem,3.6vw,3rem);line-height:1.15}
+    .hero p{color:var(--muted);font-size:1.05rem}
+    .badge{font-size:.85rem;background:#e0e7ff;color:#1e3a8a;padding:.35rem .7rem;border-radius:999px;border:1px solid #c7d2fe}
+    .badges{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.8rem}
+    .card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:1rem;box-shadow:0 2px 12px rgb(15 23 42 /.05)}
+    [data-theme="dark"] .card{background:#111827;border-color:#334155;box-shadow:none}
+    .section{padding:2.4rem 0;border-top:1px solid #e2e8f0}
+    h2{font-size:clamp(1.4rem,2.5vw,2rem);margin:0 0 1rem}
+    .videos{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+    .video{border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#fff}
+    [data-theme="dark"] .video{background:#0b1220;border-color:#334155}
+    .video h3{font-size:1rem;margin:.6rem .8rem}
+    .video .meta{color:var(--muted);font-size:.9rem;margin:-.4rem .8rem .8rem}
+    .search{display:flex;gap:.6rem;margin:0 0 1rem}
+    .search input{flex:1;padding:.8rem 1rem;border-radius:12px;border:1px solid #cbd5e1;background:var(--bg);color:var(--ink)}
+    .filters{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+    .filter{padding:.4rem .7rem;border:1px solid #cbd5e1;border-radius:999px;background:#fff;cursor:pointer}
+    .filter.active{background:#ecfeff;border-color:#67e8f9}
+    .lang-switch{display:flex;align-items:center;gap:.4rem}
+    .ads{display:grid;grid-template-columns:repeat(5,1fr);gap:.6rem}
+    .ad{height:90px;border-radius:12px;background:linear-gradient(135deg,#e2e8f0,#f1f5f9);display:grid;place-items:center;color:#475569;font-weight:700;border:1px dashed #cbd5e1}
+    .admin{margin:1rem 0;padding:1rem;border:1px dashed #93c5fd;border-radius:12px;background:#f0f9ff}
+    @media (max-width: 980px){.hero{grid-template-columns:1fr}.videos{grid-template-columns:1fr 1fr}}
+    @media (max-width: 640px){.videos{grid-template-columns:1fr}}
+    .comic iframe{filter:grayscale(.2) contrast(1.1) saturate(.9)}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <nav aria-label="ניווט ראשי">
+        <a href="#home" class="brand"><span class="logo" aria-hidden="true"></span><span>אבירית</span></a>
+        <div class="menu">
+          <a href="#videos">סרטונים</a>
+          <a href="#chat">צ'ט</a>
+          <a href="#about">על הפרויקט</a>
+        </div>
+        <div class="lang-switch" role="group" aria-label="שפות">
+          <span class="pill" id="age-pill">לילדים 10+ • חינם</span>
+          <button class="filter" data-lang="he">עברית</button>
+          <button class="filter" data-lang="en">English</button>
+          <button class="filter" data-lang="fr">Français</button>
+          <button id="themeBtn" class="filter" title="מצב כהה/בהיר">🌓</button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="home" class="container">
+    <section class="hero">
+      <div>
+        <div class="pill">לומדים קסמים של במה – בחינם</div>
+        <h1>ברוכים הבאים לאבירית</h1>
+        <p class="age">מותאם לגילאי 10 ומעלה • כל התוכן חינמי</p>
+        <p>הסרטונים מיוטיוב וטיקטוק מוצגים כאן בצורה נוחה עם חיפוש כמו בגוגל, קטגוריות, ורמות קושי. יש גם מצב "קומיקס" לעיצוב ויזואלי צנוע יותר.</p>
+        <div class="badges">
+          <span class="badge">חיפוש חכם</span>
+          <span class="badge">שפות מרובות</span>
+          <span class="badge">ללא יצירת קשר</span>
+        </div>
+      </div>
+      <div class="card" aria-label="איור לוגו">
+        <div style="display:grid;place-items:center;aspect-ratio:16/10;background:conic-gradient(from 180deg at 50% 50%, #e0f2fe, #dbeafe, #7dd3fc);border-radius:14px;overflow:hidden">
+          <svg viewBox="0 0 200 120" width="100%" aria-label="איור כובע קסמים וקלפים">
+            <rect x="0" y="0" width="200" height="120" fill="#0b1220"/>
+            <ellipse cx="100" cy="70" rx="70" ry="12" fill="#0ea5e9"/>
+            <rect x="55" y="20" width="90" height="40" rx="6" fill="#111827" stroke="#60a5fa"/>
+            <rect x="65" y="28" width="70" height="24" fill="#1f2937"/>
+            <g fill="#fff" stroke="#0ea5e9">
+              <rect x="30" y="10" width="18" height="24" rx="2" transform="rotate(20 39 22)"/>
+              <rect x="150" y="8" width="18" height="24" rx="2" transform="rotate(-12 159 20)"/>
+              <rect x="110" y="2" width="18" height="24" rx="2" transform="rotate(8 119 14)"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section id="videos" class="section">
+      <h2>סרטוני קסמים</h2>
+      <div class="search" role="search">
+        <input id="search" placeholder="חפשו קסם כמו בגוגל (למשל: קלפים, חבל, במה)" aria-label="חיפוש סרטונים"/>
+        <button class="filter" id="toggleComic" aria-pressed="false">מצב קומיקס: כבוי</button>
+      </div>
+      <div class="filters" id="filters"></div>
+      <div class="ads" aria-label="מיקומי פרסומות">
+        <div class="ad">פרסומת 1</div><div class="ad">פרסומת 2</div><div class="ad">פרסומת 3</div><div class="ad">פרסומת 4</div><div class="ad">פרסומת 5</div>
+      </div>
+      <div class="videos" id="videoGrid" aria-live="polite"></div>
+
+      <details class="admin">
+        <summary><strong>הוסף סרטון חדש (ניהול מקומי)</strong></summary>
+        <div style="display:flex;flex-wrap:wrap;gap:.6rem;margin:.6rem 0">
+          <select id="newType"><option value="yt">YouTube</option><option value="tiktok">TikTok</option></select>
+          <input id="newId" placeholder="מזהה YT (למשל dQw4w9WgXcQ) או קישור TikTok"/>
+          <input id="newTitle" placeholder="כותרת"/>
+          <input id="newTags" placeholder="תגיות (מופרדות בפסיק)"/>
+          <input id="newCat" placeholder="קטגוריה (קלפים/חבל/מטבע/במה/טיפים)"/>
+          <select id="newLevel"><option>קל</option><option>בינוני</option><option>מתקדם</option></select>
+          <button id="addVideo" class="filter">הוסף</button>
+        </div>
+        <small class="muted">הנתונים נשמרים ב-localStorage — לניהול אמיתי בענן נוסיף בהמשך.</small>
+      </details>
+    </section>
+
+    <section id="chat" class="section">
+      <h2>צ'ט בין הגולשים (דמו מקומי)</h2>
+      <div style="display:grid;grid-template-rows:auto 1fr auto;gap:.8rem;height:420px">
+        <div id="chatLog" style="border:1px solid #e2e8f0;border-radius:12px;padding:1rem;overflow:auto;background:#fff"></div>
+        <div style="display:flex;gap:.6rem">
+          <input id="chatMessage" maxlength="200" placeholder="כתבו הודעה (נשמר מקומית בלבד)" style="flex:1;padding:.8rem 1rem;border-radius:12px;border:1px solid #cbd5e1"/>
+          <button id="sendMsg" class="filter">שליחה</button>
+        </div>
+        <small class="muted">לצ'ט אמיתי נדרש שרת – אפשר להוסיף בהמשך.</small>
+      </div>
+    </section>
+
+    <section id="about" class="section">
+      <h2>על הפרויקט</h2>
+      <div class="card">
+        <p>כל התוכן חינמי, מותאם לגילאי 10+. הסרטונים נאספים מיוטיוב וטיקטוק וניתנים לחיפוש וסינון לפי קטגוריות ורמת קושי.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer><div class="container">© <span id="year"></span> אבירית • פרויקט לימוד קסמים.</div></footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // מצב כהה/בהיר
+    const themeBtn = document.getElementById('themeBtn');
+    function applyTheme(t){ document.documentElement.setAttribute('data-theme', t); localStorage.setItem('abirit_theme', t); }
+    applyTheme(localStorage.getItem('abirit_theme') || 'light');
+    if(themeBtn) themeBtn.addEventListener('click', () => { const cur = document.documentElement.getAttribute('data-theme'); applyTheme(cur==='dark'?'light':'dark'); });
+
+    // טיקטוק – טעינת סקריפט פעם אחת
+    (function(){ if(!document.querySelector('script[src*="tiktok.com/embed.js"]')){ const s=document.createElement('script'); s.async=true; s.src="https://www.tiktok.com/embed.js"; document.head.appendChild(s);} })();
+
+    // נתוני ברירת מחדל
+    const DEFAULT_VIDEOS = [
+      {type:'yt', id:'K2VPHd1bH1Y', title:'קסם קלפים למתחילים', tags:['קלפים','במה','מתחילים'], cat:'קלפים', level:'קל'},
+      {type:'yt', id:'dQw4w9WgXcQ', title:'העלמת קלף בסיסית', tags:['קלפים','במה'], cat:'קלפים', level:'קל'},
+      {type:'yt', id:'H3Q9Lm2pdef', title:'מטבע שחודר לשולחן', tags:['מטבע','במה'], cat:'מטבע', level:'בינוני'},
+      {type:'yt', id:'S8Z1pq0ghij', title:'כוסות וכדורים – טכניקה', tags:['במה','ידיים'], cat:'במה', level:'בינוני'},
+      {type:'yt', id:'A1B2C3D4klm', title:'טיפ למופע ראשון', tags:['טיפים','במה'], cat:'טיפים', level:'קל'},
+      {type:'yt', id:'g4x3Y1x9abc', title:'קשר חבל שנעלם', tags:['חבל','אשליה'], cat:'חבל', level:'קל'},
+      {type:'yt', id:'xQZsP0Test1', title:'מנטליזם בסיסי – ניחוש', tags:['מנטליזם','במה'], cat:'במה', level:'בינוני'},
+      {type:'yt', id:'xQZsP0Test2', title:'החלפת חפיסת קלפים בחשאי', tags:['קלפים','טכניקה'], cat:'קלפים', level:'מתקדם'},
+      {type:'tiktok', url:'https://www.tiktok.com/@demo/video/1234567890', title:'טריק מהיר עם מטבע', tags:['מטבע','מהיר'], cat:'מטבע', level:'קל'},
+      {type:'tiktok', url:'https://www.tiktok.com/@demo/video/0987654321', title:'קלף הופך צבע', tags:['קלפים','ויזואלי'], cat:'קלפים', level:'בינוני'}
+    ];
+
+    // אחסון מקומי
+    const LS_KEY = 'abirit_videos_v2';
+    const filtersEl = document.getElementById('filters');
+    const videoGrid = document.getElementById('videoGrid');
+    const search = document.getElementById('search');
+    const toggleComic = document.getElementById('toggleComic');
+    let comicMode=false, activeFilter='הכל';
+    const CATS = ['הכל','קלפים','חבל','מטבע','במה','טיפים'];
+
+    function loadVideos(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'[]'); }catch(e){ return []; } }
+    function saveVideos(vs){ localStorage.setItem(LS_KEY, JSON.stringify(vs)); }
+    let VIDEOS = (loadVideos().length ? loadVideos() : DEFAULT_VIDEOS);
+
+    function renderFilters(){
+      filtersEl.innerHTML = CATS.map(c=>`<button class="filter ${c===activeFilter?'active':''}" data-cat="${c}">${c}</button>`).join('');
+      filtersEl.querySelectorAll('.filter').forEach(b=>b.addEventListener('click',()=>{activeFilter=b.dataset.cat; filter(); renderFilters();}));
+    }
+
+    function ytEmbed(id){ return `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${id}" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`; }
+    function tiktokEmbed(url){ return `<blockquote class="tiktok-embed" cite="${url}" style="max-width:605px;min-width:325px;margin:0 auto"></blockquote>`; }
+
+    function card(v){
+      const media = v.type==='tiktok' ? tiktokEmbed(v.url) : ytEmbed(v.id);
+      const tags = (v.tags||[]).join(', ');
+      return `<article class="video"><div style="aspect-ratio:16/9;overflow:hidden;background:#0b1220">${media}</div><h3>${v.title}</h3><div class="meta">קטגוריה: ${v.cat||'-'} • ${v.level||'רמה'} • תגיות: ${tags}</div></article>`;
+    }
+
+    function render(list){ videoGrid.classList.toggle('comic', comicMode); videoGrid.innerHTML = list.map(card).join(''); if(window.tiktok && window.tiktok.loadEmbeds){ window.tiktok.loadEmbeds(); } }
+
+    function filter(){
+      const q = (search.value||'').toLowerCase().trim();
+      let res = [...VIDEOS];
+      if(activeFilter!=='הכל') res = res.filter(v => (v.cat||'').toLowerCase()===activeFilter.toLowerCase());
+      if(q) res = res.filter(v => (`${v.title},${(v.tags||[]).join(',')},${v.cat},${v.level}`).toLowerCase().includes(q));
+      render(res);
+    }
+
+    if(search) search.addEventListener('input', filter);
+    if(toggleComic) toggleComic.addEventListener('click', ()=>{ comicMode=!comicMode; toggleComic.textContent=`מצב קומיקס: ${comicMode?'פועל':'כבוי'}`; toggleComic.setAttribute('aria-pressed', String(comicMode)); render(VIDEOS); });
+
+    // הוספת סרטון חדש
+    const addBtn = document.getElementById('addVideo');
+    if(addBtn){
+      addBtn.addEventListener('click', ()=>{
+        const type = document.getElementById('newType').value;
+        const idOrUrl = document.getElementById('newId').value.trim();
+        const title = document.getElementById('newTitle').value.trim() || 'ללא כותרת';
+        const tags = (document.getElementById('newTags').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+        const cat = document.getElementById('newCat').value.trim() || 'במה';
+        const level = document.getElementById('newLevel').value;
+        if(!idOrUrl) return alert('נא למלא מזהה/קישור');
+        const item = (type==='tiktok') ? {type:'tiktok', url:idOrUrl, title, tags, cat, level} : {type:'yt', id:idOrUrl, title, tags, cat, level};
+        VIDEOS = [item, ...VIDEOS]; saveVideos(VIDEOS); filter();
+        ['newId','newTitle','newTags','newCat'].forEach(id=>document.getElementById(id).value='');
+      });
+    }
+
+    renderFilters(); render(VIDEOS);
+    // צ'ט דמו
+    const LOG_KEY='abirit_chat_log', chatLog=document.getElementById('chatLog'), chatMessage=document.getElementById('chatMessage'), sendMsg=document.getElementById('sendMsg');
+    function readLog(){ try{ return JSON.parse(localStorage.getItem(LOG_KEY)||'[]'); }catch(e){ return []; } }
+    function writeLog(x){ localStorage.setItem(LOG_KEY, JSON.stringify(x)); }
+    function renderChat(){ const a=readLog(); chatLog.innerHTML=a.map(t=>`<div><strong>אורח:</strong> ${t}</div>`).join(''); chatLog.scrollTop=chatLog.scrollHeight; }
+    function send(){ const t=(chatMessage.value||'').trim(); if(!t) return; const a=readLog(); a.push(t); writeLog(a); chatMessage.value=''; renderChat(); }
+    if(sendMsg){ sendMsg.addEventListener('click', send); chatMessage.addEventListener('keydown', e=>{ if(e.key==='Enter') send(); }); renderChat(); }
+
+    // מחליף שפות (טקסט כותרת בלבד לדוגמה)
+    document.querySelectorAll('[data-lang]').forEach(btn => btn.addEventListener('click', ()=>{
+      document.querySelectorAll('[data-lang]').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+      const lang = btn.dataset.lang; document.documentElement.lang = lang; document.documentElement.dir = (lang==='he'?'rtl':'ltr');
+      document.querySelector('h1').textContent = lang==='en' ? 'Welcome to Abirit' : (lang==='fr' ? 'Bienvenue à Abirit' : 'ברוכים הבאים לאבירית');
+    }));
+  </script>
+</body>
+</html>
