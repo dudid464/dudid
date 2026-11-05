@@ -25,6 +25,8 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
  const list=kind=>db.prepare('SELECT body FROM records WHERE kind=?').all(kind).map(x=>JSON.parse(x.body));
  function save(kind,data,id=randomBytes(12).toString('hex')){
   if(!data||Array.isArray(data)||!data.name||typeof data.name!=='string'||data.name.length>200)throw Error('נדרש שם עד 200 תווים');
+  for(const [field,target] of [['familyId','families'],['workerId','workers'],['caseId','cases']])if(data[field]&&!db.prepare('SELECT id FROM records WHERE id=? AND kind=?').get(data[field],target))throw Error('קישור לרשומה שאינה קיימת: '+field);
+  if(data.attachment&&(kind!=='documents'||typeof data.attachment.name!=='string'||typeof data.attachment.data!=='string'||data.attachment.data.length>540000||!/^[A-Za-z0-9+/]*={0,2}$/.test(data.attachment.data)))throw Error('מסמך לא תקין או גדול מדי');
   const record={...data,id,updatedAt:new Date().toISOString()};
   db.prepare('INSERT INTO records VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body WHERE kind=excluded.kind').run(id,kind,JSON.stringify(record));return record;
  }
