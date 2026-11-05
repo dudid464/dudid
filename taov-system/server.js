@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {userManagement} from './lib/users.js';
 import {DatabaseSync} from 'node:sqlite';
 import {randomBytes,scryptSync,timingSafeEqual,createCipheriv,createDecipheriv} from 'node:crypto';
 import {mkdirSync,readFileSync} from 'node:fs';
@@ -12,7 +13,7 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
  if(!db.prepare('SELECT name FROM accounts').get()){
   password ||= randomBytes(18).toString('base64url');
   const salt=randomBytes(16).toString('hex');
-  db.prepare('INSERT INTO accounts VALUES(?,?,?)').run('admin',salt,scryptSync(password,salt,64).toString('hex'));
+  db.prepare('INSERT INTO accounts(name,salt,hash) VALUES(?,?,?)').run('admin',salt,scryptSync(password,salt,64).toString('hex'));
   console.log('Initial admin password (store securely): '+password);
  }
  const sessions=new Map(),attempts=new Map();
@@ -22,6 +23,7 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
  const roleOf=name=>db.prepare('SELECT role FROM roles WHERE name=?').get(name)?.role||'viewer';
  const scan=()=>{let count=0;const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jerusalem'}).format(new Date());for(const kind of ['cases','tasks'])for(const r of list(kind)){if(r.due&&r.due<today&&r.status!=='הושלם'){const key=kind+':'+r.id;if(!list('notifications').some(n=>n.source===key&&n.status!=='הושלם')){save('notifications',{name:'איחור: '+r.name,status:'סימולציה',source:key,notes:'טיוטת WhatsApp בלבד — לא נשלחה הודעה'});count++;}}}return count;};
  const log=(actor,action,target)=>db.prepare('INSERT INTO audit(at,actor,action,target) VALUES(?,?,?,?)').run(new Date().toISOString(),actor,action,target);
+ const handleUsers=userManagement(db,sessions,log);
  const list=kind=>db.prepare('SELECT body FROM records WHERE kind=?').all(kind).map(x=>JSON.parse(x.body));
  function save(kind,data,id=randomBytes(12).toString('hex')){
   if(!data||Array.isArray(data)||!data.name||typeof data.name!=='string'||data.name.length>200)throw Error('נדרש שם עד 200 תווים');
@@ -32,7 +34,7 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
  }
  const server=http.createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'");
-  const send=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));};
+  const send=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));return true;};
   try{
    const url=new URL(req.url,'http://localhost');
    if(!url.pathname.startsWith('/api/')){
@@ -52,23 +54,16 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
     if(prev.until>Date.now()&&prev.count>=10)return send(429,{error:'נסיונות רבים מדי; המתן 15 דקות'});
     const account=db.prepare('SELECT * FROM accounts WHERE name=?').get(String(body.username||''));
     const hash=scryptSync(String(body.password||''),account?.salt||'dummy',64);
-    if(!account||!timingSafeEqual(hash,Buffer.from(account.hash,'hex'))){attempts.set(ip,{count:prev.until>Date.now()?prev.count+1:1,until:Date.now()+900000});return send(401,{error:'פרטי כניסה שגויים'});}
+    if(!account||account.disabled||!timingSafeEqual(hash,Buffer.from(account.hash,'hex'))){attempts.set(ip,{count:prev.until>Date.now()?prev.count+1:1,until:Date.now()+900000});return send(401,{error:'פרטי כניסה שגויים'});}
     attempts.delete(ip);const t=randomBytes(32).toString('hex');sessions.set(t,{name:account.name,expires:Date.now()+8*3600000});
     res.setHeader('Set-Cookie',`taov=${t}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${process.env.COOKIE_SECURE==='1'?'; Secure':''}`);log(account.name,'login','');return send(200,{name:account.name});
    }
-   if(!session||session.expires<Date.now()){sessions.delete(token);return send(401,{error:'נדרשת כניסה'});}
+   if(!session||session.expires<Date.now()||db.prepare('SELECT disabled FROM accounts WHERE name=?').get(session.name)?.disabled){sessions.delete(token);return send(401,{error:'נדרשת כניסה'});}
    const role=roleOf(session.name);
    if(url.pathname==='/api/me')return send(200,{name:session.name,role});
-   if(req.method!=='GET'&&role==='viewer'&&url.pathname!=='/api/logout')return send(403,{error:'הרשאת צפייה בלבד'});
+   if(req.method!=='GET'&&role==='viewer'&&!['/api/logout','/api/password'].includes(url.pathname))return send(403,{error:'הרשאת צפייה בלבד'});
    if(url.pathname==='/api/logout'&&req.method==='POST'){sessions.delete(token);res.setHeader('Set-Cookie','taov=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(200,{ok:true});}
-   if(url.pathname==='/api/users'){
-    if(role!=='admin')return send(403,{error:'נדרשת הרשאת מנהל'});
-    if(req.method==='GET')return send(200,db.prepare('SELECT accounts.name,roles.role FROM accounts LEFT JOIN roles USING(name)').all());
-    if(req.method==='POST'){
-     if(!/^[a-zA-Z0-9_-]{3,40}$/.test(body.name||'')||typeof body.password!=='string'||body.password.length<12||!['admin','editor','viewer'].includes(body.role))return send(400,{error:'שם משתמש 3–40 תווים באנגלית; סיסמה לפחות 12 תווים ותפקיד תקין'});
-     const salt=randomBytes(16).toString('hex');db.exec('BEGIN');try{db.prepare('INSERT INTO accounts VALUES(?,?,?)').run(body.name,salt,scryptSync(body.password,salt,64).toString('hex'));db.prepare('INSERT INTO roles VALUES(?,?)').run(body.name,body.role);db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw Error('שם משתמש כבר קיים');}log(session.name,'create user',body.name);return send(200,{ok:true});
-    }
-   }
+   if(await handleUsers({url,req,body,session,role,send}))return;
    if(url.pathname==='/api/history'&&req.method==='GET'){if(role!=='admin')return send(403,{error:'נדרש מנהל'});return send(200,db.prepare('SELECT * FROM audit ORDER BY id DESC LIMIT 500').all());}
    if(url.pathname==='/api/report'&&req.method==='GET')return send(200,{generatedAt:new Date().toISOString(),counts:Object.fromEntries(kinds.map(k=>[k,list(k).length])),openTasks:list('tasks').filter(r=>r.status!=='הושלם').length,overdue:list('tasks').filter(r=>r.status!=='הושלם'&&r.due&&r.due<new Date().toISOString().slice(0,10)).length,simulation:true});
    if(url.pathname==='/api/control'&&req.method==='POST'){const created=scan();log(session.name,'control',String(created));return send(200,{created,simulation:true});}
