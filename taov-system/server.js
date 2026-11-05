@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {dashboard,reportPdf} from './lib/report.js';
 import {userManagement} from './lib/users.js';
 import {DatabaseSync} from 'node:sqlite';
 import {randomBytes,scryptSync,timingSafeEqual,createCipheriv,createDecipheriv} from 'node:crypto';
@@ -29,6 +30,7 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
   if(!data||Array.isArray(data)||!data.name||typeof data.name!=='string'||data.name.length>200)throw Error('נדרש שם עד 200 תווים');
   for(const [field,target] of [['familyId','families'],['workerId','workers'],['caseId','cases']])if(data[field]&&!db.prepare('SELECT id FROM records WHERE id=? AND kind=?').get(data[field],target))throw Error('קישור לרשומה שאינה קיימת: '+field);
   if(data.attachment&&(kind!=='documents'||typeof data.attachment.name!=='string'||typeof data.attachment.data!=='string'||data.attachment.data.length>540000||!/^[A-Za-z0-9+/]*={0,2}$/.test(data.attachment.data)))throw Error('מסמך לא תקין או גדול מדי');
+  if(data.expectedRevenue!==undefined&&(!Number.isFinite(Number(data.expectedRevenue))||Number(data.expectedRevenue)<0||Number(data.expectedRevenue)>1e12))throw Error('הכנסה צפויה חייבת להיות מספר חיובי או אפס');
   const record={...data,id,updatedAt:new Date().toISOString()};
   db.prepare('INSERT INTO records VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body WHERE kind=excluded.kind').run(id,kind,JSON.stringify(record));return record;
  }
@@ -65,6 +67,10 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
    if(url.pathname==='/api/logout'&&req.method==='POST'){sessions.delete(token);res.setHeader('Set-Cookie','taov=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(200,{ok:true});}
    if(await handleUsers({url,req,body,session,role,send}))return;
    if(url.pathname==='/api/history'&&req.method==='GET'){if(role!=='admin')return send(403,{error:'נדרש מנהל'});return send(200,db.prepare('SELECT * FROM audit ORDER BY id DESC LIMIT 500').all());}
+   if(url.pathname==='/api/dashboard'&&req.method==='GET')return send(200,dashboard(list));
+   if(url.pathname==='/api/report.pdf'&&req.method==='GET'){
+    const pdf=await reportPdf(dashboard(list));res.writeHead(200,{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="taov-report.pdf"'});return res.end(pdf);
+   }
    if(url.pathname==='/api/report'&&req.method==='GET')return send(200,{generatedAt:new Date().toISOString(),counts:Object.fromEntries(kinds.map(k=>[k,list(k).length])),openTasks:list('tasks').filter(r=>r.status!=='הושלם').length,overdue:list('tasks').filter(r=>r.status!=='הושלם'&&r.due&&r.due<new Date().toISOString().slice(0,10)).length,simulation:true});
    if(url.pathname==='/api/control'&&req.method==='POST'){const created=scan();log(session.name,'control',String(created));return send(200,{created,simulation:true});}
    if(url.pathname==='/api/suggestions'&&req.method==='GET'){

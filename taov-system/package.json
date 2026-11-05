@@ -1,1 +1,20 @@
-{"name":"taov-system","version":"1.0.0","private":true,"type":"module","engines":{"node":">=24"},"scripts":{"start":"node server.js","test":"node --test","check":"node --check server.js"}}
+{
+  "name": "taov-system",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test \"test/*.test.js\"",
+    "check": "node --check server.js"
+  },
+  "dependencies": {
+    "bidi-js": "^1.1.0",
+    "csv-parse": "^7.0.3",
+    "exceljs": "^4.4.0",
+    "pdfkit": "^0.20.2"
+  }
+}
