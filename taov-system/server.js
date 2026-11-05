@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {signatureRoutes} from './lib/signatures.js';
 import {dashboard,reportPdf} from './lib/report.js';
 import {userManagement} from './lib/users.js';
 import {DatabaseSync} from 'node:sqlite';
@@ -18,7 +19,7 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
   console.log('Initial admin password (store securely): '+password);
  }
  const sessions=new Map(),attempts=new Map();
- const kinds=['leads','families','workers','matches','cases','tasks','documents','notifications'];
+ const kinds=['leads','families','workers','matches','cases','tasks','documents','notifications','signatures'];
  db.exec("CREATE TABLE IF NOT EXISTS roles(name TEXT PRIMARY KEY, role TEXT NOT NULL)");
  db.prepare("INSERT OR IGNORE INTO roles VALUES('admin','admin')").run();
  const roleOf=name=>db.prepare('SELECT role FROM roles WHERE name=?').get(name)?.role||'viewer';
@@ -108,8 +109,10 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
     let data;try{const b=body.backup;if(b.version!==1)throw Error();const key=scryptSync(String(body.passphrase),Buffer.from(b.salt,'base64'),32),dec=createDecipheriv('aes-256-gcm',key,Buffer.from(b.iv,'base64'));dec.setAuthTag(Buffer.from(b.tag,'base64'));data=JSON.parse(Buffer.concat([dec.update(Buffer.from(b.ciphertext,'base64')),dec.final()]).toString());if(data.version!==1||!Array.isArray(data.records)||data.records.some(r=>!kinds.includes(r.kind)||typeof r.id!=='string'||!JSON.parse(r.body).name))throw Error();}catch{return send(400,{error:'גיבוי לא תקין או סיסמה שגויה'});}
     db.exec('BEGIN');try{for(const r of data.records)db.prepare('INSERT OR IGNORE INTO records VALUES(?,?,?)').run(r.id,r.kind,r.body);db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}log(session.name,'restore','merge only; existing preserved');return send(200,{ok:true,mode:'merge-preserve-existing'});
    }
+   if(signatureRoutes({url,req,body,session,send,list,save,log}))return;
    const parts=url.pathname.split('/').filter(Boolean),kind=parts[1],id=parts[2];
    if(kinds.includes(kind)){
+    if(kind==='signatures'&&req.method!=='GET')return send(405,{error:'יש ליצור טיוטה באמצעות מסך החתימות בלבד'});
     if(req.method==='GET')return send(200,list(kind));
     if(req.method==='POST'||req.method==='PUT'){
      if(req.method==='PUT'&&!db.prepare('SELECT id FROM records WHERE kind=? AND id=?').get(kind,id))return send(404,{error:'לא נמצא'});
