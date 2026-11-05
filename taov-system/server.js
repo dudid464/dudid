@@ -1,6 +1,6 @@
 import http from 'node:http';
 import {DatabaseSync} from 'node:sqlite';
-import {randomBytes,scryptSync,timingSafeEqual} from 'node:crypto';
+import {randomBytes,scryptSync,timingSafeEqual,createCipheriv,createDecipheriv} from 'node:crypto';
 import {mkdirSync,readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
@@ -16,11 +16,15 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
   console.log('Initial admin password (store securely): '+password);
  }
  const sessions=new Map(),attempts=new Map();
- const kinds=['leads','families','workers','matches'];
+ const kinds=['leads','families','workers','matches','cases','tasks','documents','notifications'];
+ db.exec("CREATE TABLE IF NOT EXISTS roles(name TEXT PRIMARY KEY, role TEXT NOT NULL)");
+ db.prepare("INSERT OR IGNORE INTO roles VALUES('admin','admin')").run();
+ const roleOf=name=>db.prepare('SELECT role FROM roles WHERE name=?').get(name)?.role||'viewer';
+ const scan=()=>{let count=0;const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jerusalem'}).format(new Date());for(const kind of ['cases','tasks'])for(const r of list(kind)){if(r.due&&r.due<today&&r.status!=='הושלם'){const key=kind+':'+r.id;if(!list('notifications').some(n=>n.source===key&&n.status!=='הושלם')){save('notifications',{name:'איחור: '+r.name,status:'סימולציה',source:key,notes:'טיוטת WhatsApp בלבד — לא נשלחה הודעה'});count++;}}}return count;};
  const log=(actor,action,target)=>db.prepare('INSERT INTO audit(at,actor,action,target) VALUES(?,?,?,?)').run(new Date().toISOString(),actor,action,target);
  const list=kind=>db.prepare('SELECT body FROM records WHERE kind=?').all(kind).map(x=>JSON.parse(x.body));
  function save(kind,data,id=randomBytes(12).toString('hex')){
-  if(!data.name||typeof data.name!=='string'||data.name.length>200)throw Error('נדרש שם עד 200 תווים');
+  if(!data||Array.isArray(data)||!data.name||typeof data.name!=='string'||data.name.length>200)throw Error('נדרש שם עד 200 תווים');
   const record={...data,id,updatedAt:new Date().toISOString()};
   db.prepare('INSERT INTO records VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body WHERE kind=excluded.kind').run(id,kind,JSON.stringify(record));return record;
  }
@@ -51,8 +55,56 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
     res.setHeader('Set-Cookie',`taov=${t}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${process.env.COOKIE_SECURE==='1'?'; Secure':''}`);log(account.name,'login','');return send(200,{name:account.name});
    }
    if(!session||session.expires<Date.now()){sessions.delete(token);return send(401,{error:'נדרשת כניסה'});}
-   if(url.pathname==='/api/me')return send(200,{name:session.name,role:'admin'});
+   const role=roleOf(session.name);
+   if(url.pathname==='/api/me')return send(200,{name:session.name,role});
+   if(req.method!=='GET'&&role==='viewer'&&url.pathname!=='/api/logout')return send(403,{error:'הרשאת צפייה בלבד'});
    if(url.pathname==='/api/logout'&&req.method==='POST'){sessions.delete(token);res.setHeader('Set-Cookie','taov=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(200,{ok:true});}
+   if(url.pathname==='/api/users'){
+    if(role!=='admin')return send(403,{error:'נדרשת הרשאת מנהל'});
+    if(req.method==='GET')return send(200,db.prepare('SELECT accounts.name,roles.role FROM accounts LEFT JOIN roles USING(name)').all());
+    if(req.method==='POST'){
+     if(!/^[a-zA-Z0-9_-]{3,40}$/.test(body.name||'')||typeof body.password!=='string'||body.password.length<12||!['admin','editor','viewer'].includes(body.role))return send(400,{error:'שם משתמש 3–40 תווים באנגלית; סיסמה לפחות 12 תווים ותפקיד תקין'});
+     const salt=randomBytes(16).toString('hex');db.exec('BEGIN');try{db.prepare('INSERT INTO accounts VALUES(?,?,?)').run(body.name,salt,scryptSync(body.password,salt,64).toString('hex'));db.prepare('INSERT INTO roles VALUES(?,?)').run(body.name,body.role);db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw Error('שם משתמש כבר קיים');}log(session.name,'create user',body.name);return send(200,{ok:true});
+    }
+   }
+   if(url.pathname==='/api/history'&&req.method==='GET'){if(role!=='admin')return send(403,{error:'נדרש מנהל'});return send(200,db.prepare('SELECT * FROM audit ORDER BY id DESC LIMIT 500').all());}
+   if(url.pathname==='/api/report'&&req.method==='GET')return send(200,{generatedAt:new Date().toISOString(),counts:Object.fromEntries(kinds.map(k=>[k,list(k).length])),openTasks:list('tasks').filter(r=>r.status!=='הושלם').length,overdue:list('tasks').filter(r=>r.status!=='הושלם'&&r.due&&r.due<new Date().toISOString().slice(0,10)).length,simulation:true});
+   if(url.pathname==='/api/control'&&req.method==='POST'){const created=scan();log(session.name,'control',String(created));return send(200,{created,simulation:true});}
+   if(url.pathname==='/api/suggestions'&&req.method==='GET'){
+    const suggestions=[];for(const f of list('families'))for(const w of list('workers')){const needs=(f.skills||'').split(',').map(s=>s.trim()).filter(Boolean),skills=(w.skills||'').split(',').map(s=>s.trim());const common=needs.filter(n=>skills.includes(n));if(common.length)suggestions.push({familyId:f.id,workerId:w.id,name:f.name+' ↔ '+w.name,score:Math.round(common.length/needs.length*100),skills:common.join(', '),status:'ממתין',notes:'הצעה לפי כישורים בלבד; נדרשת בדיקה אנושית'});}return send(200,suggestions.sort((a,b)=>b.score-a.score));
+   }
+   if(url.pathname==='/api/assistant'&&req.method==='POST'){
+    const q=String(body.query||'').trim().slice(0,500);if(!q)return send(400,{error:'יש להזין שאלה'});
+    const mappings={'לידים':'leads','משפחות':'families','עובדים':'workers','תיקים':'cases','משימות':'tasks','מסמכים':'documents'};
+    const scope=Object.entries(mappings).find(([k])=>q.includes(k))?.[1];let results=(scope?[scope]:kinds).flatMap(k=>list(k).map(r=>({...r,kind:k})));
+    if(/פתוח|פתוחות|פתוחים/.test(q))results=results.filter(r=>r.status!=='הושלם');
+    if(/איחור|באיחור/.test(q))results=results.filter(r=>r.due&&r.due<new Date().toISOString().slice(0,10)&&r.status!=='הושלם');
+    const terms=q.split(/\s+/).filter(t=>t.length>1&&!['הצג','הצגי','מצא','חפש','את','כל','כמה','יש','פתוחים','פתוחות','פתוח','באיחור',...Object.keys(mappings)].includes(t));
+    if(terms.length)results=results.filter(r=>terms.every(t=>JSON.stringify(r).includes(t)));
+    return send(200,{explanation:'עוזר מקומי מבוסס כללים: חיפוש לפי מילים, סוג רשומה, פתוחים ואיחורים. אינו מודל שפה.',count:results.length,results:results.slice(0,100)});
+   }
+   if(url.pathname==='/api/sheets/read'&&req.method==='POST'){
+    if(role!=='admin')return send(403,{error:'נדרש מנהל'});
+    if(!/^[a-zA-Z0-9_-]{20,150}$/.test(body.spreadsheetId||''))return send(400,{error:'מזהה גיליון לא תקין'});
+    if(!process.env.GOOGLE_ACCESS_TOKEN)return send(409,{error:'חסר GOOGLE_ACCESS_TOKEN לקריאה בלבד; יש להגדיר בשרת, לא בדפדפן'});
+    const range=String(body.range||'A1:Z100').slice(0,100);
+    const response=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+body.spreadsheetId+'/values/'+encodeURIComponent(range),{headers:{Authorization:'Bearer '+process.env.GOOGLE_ACCESS_TOKEN},signal:AbortSignal.timeout(15000)});
+    if(!response.ok)return send(502,{error:'Google דחה את הקריאה; בדוק הרשאה, תוקף אסימון ומדיניות רשת'});
+    const result=await response.json();log(session.name,'sheets read',body.spreadsheetId);return send(200,{values:result.values||[],readOnly:true});
+   }
+   if(url.pathname==='/api/backup'&&req.method==='POST'){
+    if(role!=='admin')return send(403,{error:'נדרש מנהל'});
+    if(typeof body.passphrase!=='string'||body.passphrase.length<12)return send(400,{error:'סיסמת גיבוי: לפחות 12 תווים'});
+    const salt=randomBytes(16),iv=randomBytes(12),key=scryptSync(body.passphrase,salt,32),cipher=createCipheriv('aes-256-gcm',key,iv);
+    const data=JSON.stringify({version:1,records:db.prepare('SELECT * FROM records').all(),audit:db.prepare('SELECT * FROM audit').all()});
+    const ciphertext=Buffer.concat([cipher.update(data,'utf8'),cipher.final()]);log(session.name,'backup','encrypted');return send(200,{version:1,salt:salt.toString('base64'),iv:iv.toString('base64'),tag:cipher.getAuthTag().toString('base64'),ciphertext:ciphertext.toString('base64')});
+   }
+   if(url.pathname==='/api/restore'&&req.method==='POST'){
+    if(role!=='admin')return send(403,{error:'נדרש מנהל'});
+    if(body.confirm!=='RESTORE')return send(400,{error:'נדרש אישור שחזור מפורש'});
+    let data;try{const b=body.backup;if(b.version!==1)throw Error();const key=scryptSync(String(body.passphrase),Buffer.from(b.salt,'base64'),32),dec=createDecipheriv('aes-256-gcm',key,Buffer.from(b.iv,'base64'));dec.setAuthTag(Buffer.from(b.tag,'base64'));data=JSON.parse(Buffer.concat([dec.update(Buffer.from(b.ciphertext,'base64')),dec.final()]).toString());if(data.version!==1||!Array.isArray(data.records)||data.records.some(r=>!kinds.includes(r.kind)||typeof r.id!=='string'||!JSON.parse(r.body).name))throw Error();}catch{return send(400,{error:'גיבוי לא תקין או סיסמה שגויה'});}
+    db.exec('BEGIN');try{for(const r of data.records)db.prepare('INSERT OR IGNORE INTO records VALUES(?,?,?)').run(r.id,r.kind,r.body);db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}log(session.name,'restore','merge only; existing preserved');return send(200,{ok:true,mode:'merge-preserve-existing'});
+   }
    const parts=url.pathname.split('/').filter(Boolean),kind=parts[1],id=parts[2];
    if(kinds.includes(kind)){
     if(req.method==='GET')return send(200,list(kind));
@@ -64,6 +116,7 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
    return send(404,{error:'לא נמצא'});
   }catch(e){send(400,{error:e instanceof SyntaxError?'JSON לא תקין':e.message});}
  });
+ const timer=setInterval(()=>{try{scan();}catch(e){console.error('Automatic control failed');}},60000);timer.unref();server.on('close',()=>clearInterval(timer));
  return {server,db,list,save,kinds,log};
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){const {server}=createApp();server.listen(Number(process.env.PORT||3000),process.env.HOST||'127.0.0.1',()=>console.log('TAOV listening on port '+(process.env.PORT||3000)));}
