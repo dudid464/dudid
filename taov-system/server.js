@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {automaticBackups} from './lib/backups.js';
 import {importRoutes} from './lib/imports.js';
 import {signatureRoutes} from './lib/signatures.js';
 import {dashboard,reportPdf} from './lib/report.js';
@@ -36,6 +37,7 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
   const record={...data,id,updatedAt:new Date().toISOString()};
   db.prepare('INSERT INTO records VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body WHERE kind=excluded.kind').run(id,kind,JSON.stringify(record));return record;
  }
+ const backups=automaticBackups({db,directory,log});
  const handleImports=importRoutes({db,list,save,log,sheetFetch});
  const server=http.createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'");
@@ -98,6 +100,14 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
     if(!response.ok)return send(502,{error:'Google דחה את הקריאה; בדוק הרשאה, תוקף אסימון ומדיניות רשת'});
     const result=await response.json();log(session.name,'sheets read',body.spreadsheetId);return send(200,{values:result.values||[],readOnly:true});
    }
+   if(url.pathname.startsWith('/api/backups')){
+    if(role!=='admin')return send(403,{error:'נדרש מנהל'});
+    if(url.pathname==='/api/backups'&&req.method==='GET')return send(200,backups.status());
+    if(url.pathname==='/api/backups/run'&&req.method==='POST'){const result=backups.runDaily();return send(200,result);}
+    if(url.pathname==='/api/backups/key'&&req.method==='POST'&&body.confirm==='EXPORT_KEY'){log(session.name,'export backup key','local');return send(200,{key:backups.exportKey()});}
+    if(url.pathname==='/api/backups/download'&&req.method==='POST'){const b=backups.read(body.filename);log(session.name,'download encrypted backup',body.filename);return send(200,b);}
+    return send(404,{error:'לא נמצא'});
+   }
    if(url.pathname==='/api/backup'&&req.method==='POST'){
     if(role!=='admin')return send(403,{error:'נדרש מנהל'});
     if(typeof body.passphrase!=='string'||body.passphrase.length<12)return send(400,{error:'סיסמת גיבוי: לפחות 12 תווים'});
@@ -108,7 +118,7 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
    if(url.pathname==='/api/restore'&&req.method==='POST'){
     if(role!=='admin')return send(403,{error:'נדרש מנהל'});
     if(body.confirm!=='RESTORE')return send(400,{error:'נדרש אישור שחזור מפורש'});
-    let data;try{const b=body.backup;if(b.version!==1)throw Error();const key=scryptSync(String(body.passphrase),Buffer.from(b.salt,'base64'),32),dec=createDecipheriv('aes-256-gcm',key,Buffer.from(b.iv,'base64'));dec.setAuthTag(Buffer.from(b.tag,'base64'));data=JSON.parse(Buffer.concat([dec.update(Buffer.from(b.ciphertext,'base64')),dec.final()]).toString());if(data.version!==1||!Array.isArray(data.records)||data.records.some(r=>!kinds.includes(r.kind)||typeof r.id!=='string'||!JSON.parse(r.body).name))throw Error();}catch{return send(400,{error:'גיבוי לא תקין או סיסמה שגויה'});}
+    let data;try{const b=body.backup;if(![1,2].includes(b.version))throw Error();const key=scryptSync(String(body.passphrase),Buffer.from(b.salt,'base64'),32),dec=createDecipheriv('aes-256-gcm',key,Buffer.from(b.iv,'base64'));dec.setAuthTag(Buffer.from(b.tag,'base64'));data=JSON.parse(Buffer.concat([dec.update(Buffer.from(b.ciphertext,'base64')),dec.final()]).toString());if(![1,2].includes(data.version)||!Array.isArray(data.records)||data.records.some(r=>!kinds.includes(r.kind)||typeof r.id!=='string'||!JSON.parse(r.body).name))throw Error();}catch{return send(400,{error:'גיבוי לא תקין או סיסמה שגויה'});}
     db.exec('BEGIN');try{for(const r of data.records)db.prepare('INSERT OR IGNORE INTO records VALUES(?,?,?)').run(r.id,r.kind,r.body);db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}log(session.name,'restore','merge only; existing preserved');return send(200,{ok:true,mode:'merge-preserve-existing'});
    }
    if(await handleImports({url,req,body,session,role,send}))return;
@@ -125,7 +135,8 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
    return send(404,{error:'לא נמצא'});
   }catch(e){send(400,{error:e instanceof SyntaxError?'JSON לא תקין':e.message});}
  });
- const timer=setInterval(()=>{try{scan();}catch(e){console.error('Automatic control failed');}},60000);timer.unref();server.on('close',()=>clearInterval(timer));
- return {server,db,list,save,kinds,log};
+ try{backups.runDaily();}catch{console.error('Daily encrypted backup failed; inspect storage/key configuration');}
+ const timer=setInterval(()=>{try{scan();backups.runDaily();}catch(e){console.error('Automatic control failed');}},60000);timer.unref();server.on('close',()=>clearInterval(timer));
+ return {server,db,list,save,kinds,log,backups};
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){const {server}=createApp();server.listen(Number(process.env.PORT||3000),process.env.HOST||'127.0.0.1',()=>console.log('TAOV listening on port '+(process.env.PORT||3000)));}
