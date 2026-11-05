@@ -7,7 +7,7 @@ async function refresh(){try{$('#title').textContent=labels[current];$('#editor'
 async function show(){ $('#login').hidden=true;$('#workspace').hidden=false;$('#logout').hidden=false;$('#nav').replaceChildren();for(const [kind,label] of Object.entries(labels)){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{current=kind;$('#editor').reset();refresh();};$('#nav').append(b);}await refresh();renderTools();}
 $('#loginForm').onsubmit=async e=>{e.preventDefault();try{await api('login',Object.fromEntries(new FormData(e.target)));message('');await show();}catch(e){message(e);}};
 $('#editor').onsubmit=async e=>{e.preventDefault();try{const data=Object.fromEntries(new FormData(e.target)),id=data.id;delete data.id;const file=$('#attachment').files[0];if(file){if(current!=='documents')throw Error('צירוף קבצים זמין במסמכים בלבד');if(file.size>400000)throw Error('מגבלת מסמך: 400KB');data.attachment={name:file.name,data:btoa(Array.from(new Uint8Array(await file.arrayBuffer()),b=>String.fromCharCode(b)).join(''))};}else if(id){const existing=(await api(current)).find(r=>r.id===id);if(existing?.attachment)data.attachment=existing.attachment;}await api(current+(id?'/'+id:''),data,id?'PUT':'POST');e.target.reset();message('נשמר בהצלחה');refresh();}catch(e){message(e);}};
-$('#reset').onclick=()=>$('#editor').reset();$('#logout').onclick=async()=>{await api('logout',{});location.reload();};
+$('#clearForm').onclick=()=>$('#editor').reset();$('#logout').onclick=async()=>{await api('logout',{});location.reload();};
 api('me').then(show).catch(()=>{});
 
 function button(text,fn){const b=document.createElement('button');b.type='button';b.textContent=text;b.onclick=async()=>{try{await fn();}catch(e){message(e);}};return b;}
