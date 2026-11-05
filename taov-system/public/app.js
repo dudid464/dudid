@@ -20,7 +20,7 @@ button('הרץ בקרה',async()=>{output(await api('control',{}));refresh();}),
 button('היסטוריית פעולות',async()=>output(await api('history'))),
 button('גיבוי מוצפן',async()=>{const passphrase=prompt('סיסמת גיבוי — לפחות 12 תווים. שמור אותה בנפרד. הגיבוי אינו כולל חשבונות משתמשים.');if(passphrase)download('taov-backup.enc',await api('backup',{passphrase}));}),
 button('שחזור מגיבוי',async()=>{const file=document.createElement('input');file.type='file';file.accept='.enc,application/json';file.onchange=async()=>{try{const backup=JSON.parse(await file.files[0].text()),passphrase=prompt('סיסמת הגיבוי');if(!passphrase||!confirm('למזג נתונים מהגיבוי? רשומות קיימות יישמרו.'))return;output(await api('restore',{backup,passphrase,confirm:'RESTORE'}));refresh();}catch(e){message(e);}};file.click();}),
-button('Google Sheets — קריאה',async()=>{const spreadsheetId=prompt('מזהה גיליון סינתטי בלבד');if(!spreadsheetId)return;const range=prompt('טווח לקריאה','A1:Z100');if(range)output(await api('sheets/read',{spreadsheetId,range}));}),
+button('ייבוא — דיל 2023 – תאוב',()=>openImport()),
 button('טיוטות חתימה לחוזים',signaturePanel),button('ניהול משתמשים',manageUsers),
 button('הוספת משתמש',async()=>{const name=prompt('שם משתמש באנגלית (לפחות 3 תווים)');if(!name)return;const password=prompt('סיסמה זמנית — לפחות 12 תווים');if(!password)return;const role=prompt('תפקיד: admin / editor / viewer','viewer');if(role)output(await api('users',{name,password,role}));}));
 }

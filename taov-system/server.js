@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {importRoutes} from './lib/imports.js';
 import {signatureRoutes} from './lib/signatures.js';
 import {dashboard,reportPdf} from './lib/report.js';
 import {userManagement} from './lib/users.js';
@@ -8,7 +9,7 @@ import {mkdirSync,readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 const root=path.dirname(fileURLToPath(import.meta.url));
-export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'),password=process.env.ADMIN_PASSWORD}={}){
+export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'),password=process.env.ADMIN_PASSWORD,sheetFetch=fetch}={}){
  mkdirSync(directory,{recursive:true,mode:0o700});
  const db=new DatabaseSync(path.join(directory,'taov.sqlite'));
  db.exec('PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS records(id TEXT PRIMARY KEY, kind TEXT NOT NULL, body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS accounts(name TEXT PRIMARY KEY,salt TEXT,hash TEXT); CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, at TEXT, actor TEXT, action TEXT, target TEXT)');
@@ -35,13 +36,14 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
   const record={...data,id,updatedAt:new Date().toISOString()};
   db.prepare('INSERT INTO records VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body WHERE kind=excluded.kind').run(id,kind,JSON.stringify(record));return record;
  }
+ const handleImports=importRoutes({db,list,save,log,sheetFetch});
  const server=http.createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'");
   const send=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));return true;};
   try{
    const url=new URL(req.url,'http://localhost');
    if(!url.pathname.startsWith('/api/')){
-    const files={'/':'index.html','/app.js':'app.js','/style.css':'style.css'};
+    const files={'/':'index.html','/app.js':'app.js','/style.css':'style.css','/import-ui.js':'import-ui.js'};
     const f=files[url.pathname];if(!f)return send(404,{error:'לא נמצא'});
     res.setHeader('Content-Type',f.endsWith('.js')?'text/javascript':f.endsWith('.css')?'text/css':'text/html; charset=utf-8');return res.end(readFileSync(path.join(root,'public',f)));
    }
@@ -109,6 +111,7 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
     let data;try{const b=body.backup;if(b.version!==1)throw Error();const key=scryptSync(String(body.passphrase),Buffer.from(b.salt,'base64'),32),dec=createDecipheriv('aes-256-gcm',key,Buffer.from(b.iv,'base64'));dec.setAuthTag(Buffer.from(b.tag,'base64'));data=JSON.parse(Buffer.concat([dec.update(Buffer.from(b.ciphertext,'base64')),dec.final()]).toString());if(data.version!==1||!Array.isArray(data.records)||data.records.some(r=>!kinds.includes(r.kind)||typeof r.id!=='string'||!JSON.parse(r.body).name))throw Error();}catch{return send(400,{error:'גיבוי לא תקין או סיסמה שגויה'});}
     db.exec('BEGIN');try{for(const r of data.records)db.prepare('INSERT OR IGNORE INTO records VALUES(?,?,?)').run(r.id,r.kind,r.body);db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}log(session.name,'restore','merge only; existing preserved');return send(200,{ok:true,mode:'merge-preserve-existing'});
    }
+   if(await handleImports({url,req,body,session,role,send}))return;
    if(signatureRoutes({url,req,body,session,send,list,save,log}))return;
    const parts=url.pathname.split('/').filter(Boolean),kind=parts[1],id=parts[2];
    if(kinds.includes(kind)){
