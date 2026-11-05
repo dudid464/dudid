@@ -2,3 +2,5 @@ data
 node_modules
 .env
 *.enc
+.git
+__pycache__

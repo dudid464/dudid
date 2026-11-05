@@ -53,7 +53,7 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
    if(['POST','PUT','PATCH'].includes(req.method)){
     if(req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`&&req.headers.origin!==`https://${req.headers.host}`)return send(403,{error:'מקור בקשה אינו מורשה'});
     if(!req.headers['content-type']?.startsWith('application/json'))return send(415,{error:'JSON required'});
-    let raw='';for await(const c of req){raw+=c;if(raw.length>1024*1024)return send(413,{error:'בקשה גדולה מדי'});}body=JSON.parse(raw||'{}');
+    let raw='';for await(const c of req){raw+=c;if(raw.length>(url.pathname==='/api/restore'?64*1024*1024:1024*1024))return send(413,{error:'בקשה גדולה מדי'});}body=JSON.parse(raw||'{}');
    }
    const token=/taov=([^;]+)/.exec(req.headers.cookie||'')?.[1];const session=sessions.get(token);
    if(url.pathname==='/api/login'&&req.method==='POST'){
@@ -68,7 +68,7 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
    if(!session||session.expires<Date.now()||db.prepare('SELECT disabled FROM accounts WHERE name=?').get(session.name)?.disabled){sessions.delete(token);return send(401,{error:'נדרשת כניסה'});}
    const role=roleOf(session.name);
    if(url.pathname==='/api/me')return send(200,{name:session.name,role});
-   if(req.method!=='GET'&&role==='viewer'&&!['/api/logout','/api/password'].includes(url.pathname))return send(403,{error:'הרשאת צפייה בלבד'});
+   if(req.method!=='GET'&&role==='viewer'&&!['/api/logout','/api/password','/api/assistant'].includes(url.pathname))return send(403,{error:'הרשאת צפייה בלבד'});
    if(url.pathname==='/api/logout'&&req.method==='POST'){sessions.delete(token);res.setHeader('Set-Cookie','taov=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(200,{ok:true});}
    if(await handleUsers({url,req,body,session,role,send}))return;
    if(url.pathname==='/api/history'&&req.method==='GET'){if(role!=='admin')return send(403,{error:'נדרש מנהל'});return send(200,db.prepare('SELECT * FROM audit ORDER BY id DESC LIMIT 500').all());}
