@@ -1,0 +1,37 @@
+name: taov-production
+
+services:
+  taov:
+    build: .
+    init: true
+    environment:
+      COOKIE_SECURE: "1"
+      ADMIN_PASSWORD:
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:?Set BACKUP_PASSPHRASE in the deployment environment}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      GOOGLE_ACCESS_TOKEN:
+    volumes:
+      - taov-data:/app/data
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      TAOV_DOMAIN: ${TAOV_DOMAIN:?Set TAOV_DOMAIN to the TAOV hostname}
+      NO_PROXY: taov,localhost,127.0.0.1
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      taov:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  taov-data:
+  caddy-data:
+  caddy-config:

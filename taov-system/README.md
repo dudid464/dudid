@@ -147,3 +147,7 @@ git push origin taov-system
 ```
 
 יצירת PR דורשת גישת GitHub API ל־`api.github.com` והרשאה מתאימה. push דרך Git ויצירת PR הן הרשאות נפרדות.
+
+### חבילת פריסה לשרת ייעודי
+
+לפריסה עם Caddy, ‏HTTPS וגיבוי מוצפן לאחסון חיצוני, ראו [הוראות פריסה לשרת ייעודי](deploy/README.md).

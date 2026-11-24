@@ -1,0 +1,3 @@
+{$TAOV_DOMAIN} {
+	reverse_proxy taov:3000
+}
