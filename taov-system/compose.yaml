@@ -3,6 +3,12 @@ services:
     build: .
     ports:
       - "127.0.0.1:3000:3000"
+    environment:
+      COOKIE_SECURE: ${COOKIE_SECURE:-0}
+      ADMIN_PASSWORD:
+      GOOGLE_ACCESS_TOKEN:
+      BACKUP_PASSPHRASE:
+      BACKUP_RETENTION_DAYS:
     volumes:
       - taov-data:/app/data
     restart: unless-stopped

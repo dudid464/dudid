@@ -15,10 +15,11 @@ export function createApp({directory=process.env.DATA_DIR||path.join(root,'data'
  const db=new DatabaseSync(path.join(directory,'taov.sqlite'));
  db.exec('PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS records(id TEXT PRIMARY KEY, kind TEXT NOT NULL, body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS accounts(name TEXT PRIMARY KEY,salt TEXT,hash TEXT); CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, at TEXT, actor TEXT, action TEXT, target TEXT)');
  if(!db.prepare('SELECT name FROM accounts').get()){
-  password ||= randomBytes(18).toString('base64url');
+  const generatedPassword=!password;
+  if(generatedPassword)password=randomBytes(18).toString('base64url');
   const salt=randomBytes(16).toString('hex');
   db.prepare('INSERT INTO accounts(name,salt,hash) VALUES(?,?,?)').run('admin',salt,scryptSync(password,salt,64).toString('hex'));
-  console.log('Initial admin password (store securely): '+password);
+  if(generatedPassword)console.log('Initial admin password (store securely): '+password);
  }
  const sessions=new Map(),attempts=new Map();
  const kinds=['leads','families','workers','matches','cases','tasks','documents','notifications','signatures'];
